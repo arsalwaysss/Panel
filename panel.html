@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Panel - ModCombo Control</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0c10; color: #eef2ff; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+        .header { background: #111317; padding: 20px 0; border-bottom: 1px solid #f59e0b; margin-bottom: 30px; }
+        .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #111317; padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #f59e0b; }
+        .stat-number { font-size: 2rem; font-weight: 800; color: #f59e0b; }
+        .search-input { padding: 12px; background: #1a1e26; border: 1px solid #2d2f3e; border-radius: 12px; color: white; margin-bottom: 20px; width: 100%; max-width: 300px; }
+        .user-card { background: #111317; border-radius: 16px; padding: 20px; margin-bottom: 15px; border: 1px solid #2d2f3e; }
+        .user-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-warning { background: #f59e0b; color: #0a0c10; }
+        .btn-primary { background: linear-gradient(95deg, #f59e0b, #ef4444); color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+        .btn-edit { background: #3b82f6; color: white; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #2d2f3e; }
+        th { color: #f59e0b; }
+        .status-pending, .status-approved, .status-rejected { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .status-pending { background: #f59e0b; color: #0a0c10; }
+        .status-approved { background: #10b981; color: white; }
+        .status-rejected { background: #ef4444; color: white; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 24px; background: #1a1e26; border: none; border-radius: 40px; color: white; cursor: pointer; }
+        .tab-btn.active { background: linear-gradient(95deg, #f59e0b, #ef4444); }
+        .mod-item { background: #1a1e26; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .version-list { margin-top: 10px; padding-left: 20px; border-left: 2px solid #f59e0b; }
+        .version-item { padding: 5px 0; font-size: 0.8rem; }
+        .loading { text-align: center; padding: 50px; color: #f59e0b; }
+        
+        /* Broadcast Section */
+        .broadcast-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
+        .broadcast-card { background: linear-gradient(135deg, #111317, #0a0c10); border: 2px solid #f59e0b; border-radius: 24px; padding: 25px; }
+        .broadcast-title { font-size: 1.2rem; color: #f59e0b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2d2f3e; padding-bottom: 12px; }
+        .broadcast-input, .broadcast-textarea { width: 100%; padding: 12px; background: #1a1e26; border: 1px solid #2d2f3e; border-radius: 12px; color: white; margin-bottom: 15px; }
+        .broadcast-textarea { min-height: 120px; resize: vertical; }
+        .broadcast-preview { background: #1a1e26; border-radius: 16px; padding: 15px; margin-top: 10px; border-left: 4px solid #f59e0b; }
+        .btn-broadcast { background: linear-gradient(95deg, #f59e0b, #ef4444); color: white; padding: 12px 24px; border: none; border-radius: 40px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 15px; }
+        .announcement-list { max-height: 400px; overflow-y: auto; }
+        .announcement-item { background: #1a1e26; border-radius: 16px; padding: 15px; margin-bottom: 12px; border-left: 4px solid #f59e0b; }
+        .announcement-item-title { font-weight: bold; color: #f59e0b; margin-bottom: 8px; }
+        .announcement-item-date { font-size: 0.7rem; color: #9ca3af; margin-bottom: 8px; }
+        .announcement-item-message { font-size: 0.85rem; color: #eef2ff; white-space: pre-wrap; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .announcement-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .empty-announcement { text-align: center; padding: 40px; color: #9ca3af; }
+        @media (max-width: 900px) { .broadcast-wrapper { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="header"><div class="container"><div class="logo">👑 MODCOMBO ADMIN PANEL</div><p style="color:#9ca3af;">Kelola User, Mod, Approval Login & Broadcast Pengumuman</p></div></div>
+<div class="container">
+    <div class="broadcast-wrapper">
+        <div class="broadcast-card"><div class="broadcast-title"><i class="fas fa-paper-plane"></i> Kirim Pengumuman Baru</div>
+            <input type="text" id="annTitle" class="broadcast-input" placeholder="Judul Pengumuman">
+            <textarea id="annMessage" class="broadcast-textarea" placeholder="Isi pengumuman..."></textarea>
+            <div class="broadcast-preview"><div><strong id="previewTitle" style="color:#f59e0b;">Judul Pengumuman</strong></div><div id="previewMessage" style="color:#9ca3af;">Isi pengumuman akan tampil di sini</div></div>
+            <button class="btn-broadcast" id="sendBroadcastBtn"><i class="fas fa-paper-plane"></i> Kirim Pengumuman</button>
+        </div>
+        <div class="broadcast-card"><div class="broadcast-title"><i class="fas fa-history"></i> Riwayat Pengumuman<button class="btn btn-danger btn-sm" id="clearAllAnnouncementsBtn" style="margin-left: auto; padding: 5px 12px;"><i class="fas fa-trash-alt"></i> Hapus Semua</button></div>
+            <div id="announcementsList" class="announcement-list"><div class="loading"><i class="fas fa-spinner fa-pulse"></i> Memuat...</div></div>
+        </div>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="tabs"><button class="tab-btn active" onclick="showTab('pending')">⏳ Menunggu Approval</button><button class="tab-btn" onclick="showTab('users')">👥 Semua User</button><button class="tab-btn" onclick="showTab('mods')">📦 Semua Mod</button><button class="tab-btn" onclick="showTab('history')">📜 Riwayat Login</button></div>
+    <div id="pendingTab"><div class="user-card"><h3>⏳ User Menunggu Persetujuan</h3><div id="pendingList" class="loading">Memuat...</div></div></div>
+    <div id="usersTab" style="display:none;"><div class="user-card"><h3>👥 Semua User</h3><input type="text" id="searchUser" class="search-input" placeholder="Cari user..."><div id="usersList"></div></div></div>
+    <div id="modsTab" style="display:none;"><div class="user-card"><h3>📦 Semua Mod</h3><input type="text" id="searchMod" class="search-input" placeholder="Cari mod..."><div id="modsList"></div></div></div>
+    <div id="historyTab" style="display:none;"><div class="user-card"><h3>📜 Riwayat Login</h3><div id="historyList"></div></div></div>
+</div>
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyB2-Z1kNTdvhzSZHdkxeTU9sGI66YwQPrY", authDomain: "arsalwaysss-e0226.firebaseapp.com", databaseURL: "https://arsalwaysss-e0226-default-rtdb.firebaseio.com", projectId: "arsalwaysss-e0226", storageBucket: "arsalwaysss-e0226.firebasestorage.app", messagingSenderId: "762015150179", appId: "1:762015150179:web:a936f5ef5a3971bd5fc856" };
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let allUsers=[], allMods=[], allHistory=[], allAnnouncements=[];
+    
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function formatDate(d){ if(!d) return '-'; try{ return new Date(d).toLocaleString(); }catch(e){ return '-'; } }
+    
+    // Broadcast functions
+    async function sendBroadcast(){ const title=document.getElementById('annTitle').value.trim(), message=document.getElementById('annMessage').value.trim(); if(!title||!message){ alert('Isi judul dan isi pengumuman!'); return; } if(confirm(`Kirim pengumuman?\n\nJudul: ${title}`)){ const newRef=db.ref('announcements').push(); await newRef.set({title,message,date:new Date().toISOString()}); await db.ref('announcements/latest').set({title,message,date:new Date().toISOString()}); alert('✅ Pengumuman terkirim!'); document.getElementById('annTitle').value=''; document.getElementById('annMessage').value=''; loadAnnouncements(); } }
+    async function loadAnnouncements(){ const snap=await db.ref('announcements').once('value'); const list=[]; if(snap.exists()){ const ann=snap.val(); for(let id in ann){ if(id!=='latest') list.push({id,...ann[id]}); } } list.sort((a,b)=>new Date(b.date)-new Date(a.date)); allAnnouncements=list; renderAnnouncements(); }
+    function renderAnnouncements(){ const container=document.getElementById('announcementsList'); if(!container) return; if(allAnnouncements.length===0){ container.innerHTML='<div class="empty-announcement">📭 Belum ada pengumuman</div>'; return; } container.innerHTML=allAnnouncements.map(ann=>`<div class="announcement-item"><div class="announcement-item-title">📢 ${escapeHtml(ann.title)}</div><div class="announcement-item-date">📅 ${formatDate(ann.date)}</div><div class="announcement-item-message">${escapeHtml(ann.message).substring(0,100)}${ann.message.length>100?'...':''}</div><div class="announcement-actions"><button class="btn btn-edit btn-sm" onclick="editAnnouncement('${ann.id}','${escapeHtml(ann.title).replace(/'/g,"\\'")}','${escapeHtml(ann.message).replace(/'/g,"\\'").replace(/\n/g,'\\n')}')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteAnnouncement('${ann.id}')">Hapus</button><button class="btn btn-primary btn-sm" onclick="setAsLatest('${ann.id}','${escapeHtml(ann.title).replace(/'/g,"\\'")}','${escapeHtml(ann.message).replace(/'/g,"\\'").replace(/\n/g,'\\n')}')">Jadikan Aktif</button></div></div>`).join(''); }
+    async function editAnnouncement(id,oldTitle,oldMessage){ const newTitle=prompt('Edit judul:',oldTitle); if(!newTitle) return; const newMessage=prompt('Edit isi:',oldMessage); if(!newMessage) return; await db.ref(`announcements/${id}`).update({title:newTitle,message:newMessage,editedAt:new Date().toISOString()}); const latestSnap=await db.ref('announcements/latest').once('value'); if(latestSnap.exists() && latestSnap.val().title===oldTitle) await db.ref('announcements/latest').set({title:newTitle,message:newMessage,date:new Date().toISOString()}); loadAnnouncements(); }
+    async function deleteAnnouncement(id){ if(confirm('Hapus pengumuman ini?')){ const annSnap=await db.ref(`announcements/${id}`).once('value'); const ann=annSnap.val(); const latestSnap=await db.ref('announcements/latest').once('value'); if(latestSnap.exists() && latestSnap.val().title===ann?.title) await db.ref('announcements/latest').remove(); await db.ref(`announcements/${id}`).remove(); loadAnnouncements(); } }
+    async function setAsLatest(id,title,message){ await db.ref('announcements/latest').set({title,message,date:new Date().toISOString()}); alert('✅ Pengumuman aktif diperbarui!'); }
+    async function clearAllAnnouncements(){ if(confirm('⚠️ Hapus SEMUA pengumuman? Tindakan tidak bisa dibatalkan!')){ await db.ref('announcements').remove(); await db.ref('announcements/latest').remove(); loadAnnouncements(); } }
+    document.getElementById('sendBroadcastBtn').addEventListener('click',sendBroadcast);
+    document.getElementById('clearAllAnnouncementsBtn').addEventListener('click',clearAllAnnouncements);
+    document.getElementById('annTitle')?.addEventListener('input',()=>{ document.getElementById('previewTitle').innerText=document.getElementById('annTitle').value||'Judul Pengumuman'; document.getElementById('previewMessage').innerHTML=(document.getElementById('annMessage').value||'Isi pengumuman akan tampil di sini').replace(/\n/g,'<br>'); });
+    document.getElementById('annMessage')?.addEventListener('input',()=>{ document.getElementById('previewMessage').innerHTML=(document.getElementById('annMessage').value||'Isi pengumuman akan tampil di sini').replace(/\n/g,'<br>'); });
+    
+    // Load users, mods, history
+    async function loadAllData(){
+        try{
+            const usersSnap=await db.ref('users').once('value');
+            allUsers=[]; if(usersSnap.exists()){ const u=usersSnap.val(); for(let id in u) allUsers.push({id,...u[id]}); }
+            const modsSnap=await db.ref('users_mods').once('value');
+            allMods=[]; if(modsSnap.exists()){ const users=modsSnap.val(); for(let uid in users){ for(let key in users[uid].apps){ const mod=users[uid].apps[key]; const downloadSnap=await db.ref(`mods_downloads/${key}`).once('value'); const downloads=downloadSnap.val()||0; allMods.push({...mod, userId:uid, appKey:key, downloads}); } } }
+            const historySnap=await db.ref('login_history').once('value');
+            allHistory=[]; if(historySnap.exists()){ const h=historySnap.val(); for(let id in h) allHistory.push({id,...h[id]}); allHistory.reverse(); }
+            updateStats(); renderPending(); renderUsers(); renderMods(); renderHistory();
+        }catch(e){ console.error(e); }
+    }
+    function updateStats(){ const pending=allUsers.filter(u=>u.status==='pending'||!u.status).length; const approved=allUsers.filter(u=>u.status==='approved').length; const rejected=allUsers.filter(u=>u.status==='rejected').length; document.getElementById('statsGrid').innerHTML=`<div class="stat-card"><div class="stat-number">${allUsers.length}</div><div>Total User</div></div><div class="stat-card"><div class="stat-number">${allMods.length}</div><div>Total Mod</div></div><div class="stat-card"><div class="stat-number">${pending}</div><div>Menunggu</div></div><div class="stat-card"><div class="stat-number">${approved}</div><div>Disetujui</div></div><div class="stat-card"><div class="stat-number">${rejected}</div><div>Ditolak</div></div>`; }
+    function renderPending(){ const pending=allUsers.filter(u=>u.status==='pending'||!u.status); const container=document.getElementById('pendingList'); if(pending.length===0){ container.innerHTML='<div class="loading">✨ Tidak ada user menunggu persetujuan</div>'; return; } container.innerHTML=`<table><thead><tr><th>Email</th><th>Nama</th><th>Foto</th><th>Waktu Daftar</th><th>Aksi</th></tr></thead><tbody>${pending.map(u=>`<tr><td>${u.email||'-'}<br><span style="font-size:0.7rem;">${u.uid?u.uid.substring(0,8):''}</span></td><td>${u.displayName||'-'}</td><td><img src="${u.photoURL||'https://ui-avatars.com/api/?background=f59e0b&color=fff&name='+(u.displayName||'U')}" width="40" height="40" style="border-radius:50%;"></td><td>${u.createdAt?new Date(u.createdAt).toLocaleString():'-'}</td><td><button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">Setujui</button> <button class="btn btn-danger btn-sm" onclick="rejectUser('${u.id}')">Tolak</button></td></tr>`).join('')}</tbody></table>`; }
+    function renderUsers(){ const search=document.getElementById('searchUser')?.value.toLowerCase()||''; const filtered=allUsers.filter(u=>(u.displayName||'').toLowerCase().includes(search)||(u.email||'').toLowerCase().includes(search)); document.getElementById('usersList').innerHTML=filtered.map(u=>`<div class="user-card"><div class="user-header"><div><strong>${escapeHtml(u.displayName||'Tanpa nama')}</strong><br><span style="color:#f59e0b;">📧 ${u.email||'-'}</span><br><span>Status: <span class="status-${u.status||'pending'}">${u.status==='approved'?'Disetujui':u.status==='rejected'?'Ditolak':'Menunggu'}</span></span><br><span style="font-size:0.7rem;">Bergabung: ${u.createdAt?new Date(u.createdAt).toLocaleString():'-'}</span></div><div><button class="btn btn-warning btn-sm" onclick="editUser('${u.id}','${u.displayName}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Hapus</button></div></div><div style="margin-top:10px;"><strong>📦 Mod (${allMods.filter(m=>m.userId===u.id).length}):</strong>${allMods.filter(m=>m.userId===u.id).map(m=>`<div class="mod-item"><strong>${m.icon||'📱'} ${escapeHtml(m.title)}</strong> (${m.category==='game'?'Game':'Aplikasi'})<br>Download: ${m.downloads||0}<div class="version-list">Versi: ${m.versions?.map(v=>`v${v.version}`).join(', ')||'-'}</div><button class="btn btn-warning btn-sm" onclick="editMod('${u.id}','${m.appKey}','${m.title}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="deleteMod('${u.id}','${m.appKey}')">Hapus</button></div>`).join('')||'<div style="color:#9ca3af;">Tidak ada mod</div>'}</div></div>`).join(''); }
+    function renderMods(){ const search=document.getElementById('searchMod')?.value.toLowerCase()||''; const filtered=allMods.filter(m=>m.title.toLowerCase().includes(search)); document.getElementById('modsList').innerHTML=filtered.map(m=>`<div class="user-card"><div><strong>${m.icon||'📱'} ${escapeHtml(m.title)}</strong><br><span style="color:#f59e0b;">${m.category==='game'?'Game':'Aplikasi'}</span><br><span style="font-size:0.8rem;">👤 Uploader: ${escapeHtml(m.username)} (${m.userId.substring(0,8)}...)</span><br>📥 Download: ${m.downloads||0}</div><div class="version-list"><strong>Versi:</strong>${m.versions?.map(v=>`<div class="version-item">v${v.version} | ${v.size} | ${v.date||'-'}</div>`).join('')||'-'}</div><div><button class="btn btn-warning btn-sm" onclick="editMod('${m.userId}','${m.appKey}','${m.title}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="deleteMod('${m.userId}','${m.appKey}')">Hapus</button></div></div>`).join(''); }
+    function renderHistory(){ document.getElementById('historyList').innerHTML=allHistory.map(h=>`<div class="user-card"><div><strong style="color:${h.status==='approved'?'#10b981':h.status==='rejected'?'#ef4444':'#f59e0b'}">${h.status==='approved'?'✅ DISETUJUI':h.status==='rejected'?'❌ DITOLAK':'⏳ MENUNGGU'}</strong><br><span>User: ${h.displayName||h.email||'-'}</span><br><span style="font-size:0.75rem;">Email: ${h.email||'-'}</span></div><div style="color:#9ca3af;">${h.timestamp?new Date(h.timestamp).toLocaleString():'-'}</div></div>`).join(''); }
+    
+    async function approveUser(uid){ if(confirm('Setujui user ini?')){ await db.ref(`users/${uid}`).update({status:'approved',approvedAt:new Date().toISOString()}); await db.ref('login_history').push({email:allUsers.find(u=>u.id===uid)?.email,displayName:allUsers.find(u=>u.id===uid)?.displayName,status:'approved',timestamp:new Date().toISOString()}); loadAllData(); } }
+    async function rejectUser(uid){ if(confirm('Tolak user ini?')){ await db.ref(`users/${uid}`).update({status:'rejected',rejectedAt:new Date().toISOString()}); await db.ref('login_history').push({email:allUsers.find(u=>u.id===uid)?.email,displayName:allUsers.find(u=>u.id===uid)?.displayName,status:'rejected',timestamp:new Date().toISOString()}); loadAllData(); } }
+    async function editUser(uid,curName){ const newName=prompt('Edit nama:',curName); if(newName&&newName!==curName){ await db.ref(`users/${uid}`).update({displayName:newName}); loadAllData(); } }
+    async function deleteUser(uid){ if(confirm('Hapus user ini beserta semua modnya?')){ await db.ref(`users_mods/${uid}`).remove(); await db.ref(`users/${uid}`).remove(); loadAllData(); } }
+    async function deleteMod(uid,key){ if(confirm('Hapus mod ini?')){ await db.ref(`users_mods/${uid}/apps/${key}`).remove(); loadAllData(); } }
+    async function editMod(uid,key,curTitle){ const newTitle=prompt('Edit judul mod:',curTitle); if(newTitle&&newTitle!==curTitle){ await db.ref(`users_mods/${uid}/apps/${key}`).update({title:newTitle}); loadAllData(); } }
+    function showTab(tab){ document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active')); if(tab==='pending'){ document.querySelector('.tab-btn:nth-child(1)').classList.add('active'); document.getElementById('pendingTab').style.display='block'; document.getElementById('usersTab').style.display='none'; document.getElementById('modsTab').style.display='none'; document.getElementById('historyTab').style.display='none'; } else if(tab==='users'){ document.querySelector('.tab-btn:nth-child(2)').classList.add('active'); document.getElementById('pendingTab').style.display='none'; document.getElementById('usersTab').style.display='block'; document.getElementById('modsTab').style.display='none'; document.getElementById('historyTab').style.display='none'; } else if(tab==='mods'){ document.querySelector('.tab-btn:nth-child(3)').classList.add('active'); document.getElementById('pendingTab').style.display='none'; document.getElementById('usersTab').style.display='none'; document.getElementById('modsTab').style.display='block'; document.getElementById('historyTab').style.display='none'; } else if(tab==='history'){ document.querySelector('.tab-btn:nth-child(4)').classList.add('active'); document.getElementById('pendingTab').style.display='none'; document.getElementById('usersTab').style.display='none'; document.getElementById('modsTab').style.display='none'; document.getElementById('historyTab').style.display='block'; } }
+    document.getElementById('searchUser')?.addEventListener('input',renderUsers); document.getElementById('searchMod')?.addEventListener('input',renderMods);
+    window.showTab=showTab; window.approveUser=approveUser; window.rejectUser=rejectUser; window.editUser=editUser; window.deleteUser=deleteUser; window.deleteMod=deleteMod; window.editMod=editMod; window.editAnnouncement=editAnnouncement; window.deleteAnnouncement=deleteAnnouncement; window.setAsLatest=setAsLatest;
+    loadAllData(); loadAnnouncements();
+</script>
+</body>
+</html>
